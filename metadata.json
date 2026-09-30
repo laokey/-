@@ -1,0 +1,6 @@
+{
+  "name": "心动星芒 - 浪漫粒子表白",
+  "description": "充满浪漫氛围的高性能粒子爱心表白特效，支持移动端自适应、实时触摸交互与自定义告白文字。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
