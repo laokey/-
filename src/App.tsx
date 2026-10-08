@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ParticleCanvas } from './components/ParticleCanvas';
 import { MemoryStarsOverlay } from './components/MemoryStarsOverlay';
 import { TopControls } from './components/TopControls';
@@ -7,103 +7,87 @@ import { ConfessionConfig, ParticleMode, ColorThemeId, MemoryStarPhoto, DiarySta
 import { COLOR_THEMES, DEFAULT_CONFIG, DEFAULT_MEMORY_STARS, DEFAULT_DIARY_STARS } from './constants/themes';
 import { romanticAudio } from './utils/audio';
 import { calculateDaysFromDate } from './utils/dateUtils';
+import { fetchContent, saveContent } from './utils/contentApi';
 import { Heart, Sparkles, Check } from 'lucide-react';
 
-export default function App() {
-  // Parse URL query parameters if shared, or load from localStorage with auto-calculated days
-  const [config, setConfig] = useState<ConfessionConfig>(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const to = params.get('to');
-      const msg = params.get('msg');
-      const from = params.get('from');
-      const theme = params.get('theme') as ColorThemeId | null;
-      const days = params.get('days');
-      const date = params.get('date');
+const CONFIG_STORAGE_KEY = 'romantic_confession_config';
+const MEMORY_STARS_STORAGE_KEY = 'romantic_memory_stars';
+const DIARY_STARS_STORAGE_KEY = 'romantic_diary_stars';
 
-      let initialConfig: ConfessionConfig = DEFAULT_CONFIG;
+function readStoredValue<T>(key: string): T | null {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as T) : null;
+  } catch {
+    return null;
+  }
+}
 
-      const stored = localStorage.getItem('romantic_confession_config');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        initialConfig = {
-          ...DEFAULT_CONFIG,
-          ...parsed,
-          showDaysCounter: parsed.showDaysCounter !== false,
-        };
-      }
+function applyUrlOverrides(baseConfig: ConfessionConfig): ConfessionConfig {
+  const params = new URLSearchParams(window.location.search);
+  const to = params.get('to');
+  const msg = params.get('msg');
+  const from = params.get('from');
+  const theme = params.get('theme') as ColorThemeId | null;
+  const days = params.get('days');
+  const date = params.get('date');
 
-      if (to || msg || from || theme || days || date) {
-        initialConfig = {
-          recipient: to || initialConfig.recipient,
-          message: msg || initialConfig.message,
-          sender: from || initialConfig.sender,
-          themeId: theme && COLOR_THEMES[theme] ? theme : initialConfig.themeId,
-          daysTogether: days ? parseInt(days, 10) : initialConfig.daysTogether,
-          showDaysCounter: true,
-          dateStr: date || initialConfig.dateStr,
-          anniversaryLabel: initialConfig.anniversaryLabel,
-        };
-      }
+  if (!to && !msg && !from && !theme && !days && !date) {
+    return baseConfig;
+  }
 
-      // Automatically compute days based on the anniversary date
-      const autoDays = calculateDaysFromDate(initialConfig.dateStr);
-      return {
-        ...initialConfig,
-        daysTogether: autoDays,
-      };
-    } catch {
-      return {
-        ...DEFAULT_CONFIG,
-        daysTogether: calculateDaysFromDate(DEFAULT_CONFIG.dateStr),
-      };
-    }
-  });
-
-  const [memoryStars, setMemoryStars] = useState<MemoryStarPhoto[]>(() => {
-    try {
-      const stored = localStorage.getItem('romantic_memory_stars');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // ignore
-    }
-    return DEFAULT_MEMORY_STARS;
-  });
-
-  const handleUpdateMemoryStars = (stars: MemoryStarPhoto[]) => {
-    setMemoryStars(stars);
-    try {
-      localStorage.setItem('romantic_memory_stars', JSON.stringify(stars));
-    } catch {
-      // ignore
-    }
+  return {
+    recipient: to || baseConfig.recipient,
+    message: msg || baseConfig.message,
+    sender: from || baseConfig.sender,
+    themeId: theme && COLOR_THEMES[theme] ? theme : baseConfig.themeId,
+    daysTogether: days ? parseInt(days, 10) : baseConfig.daysTogether,
+    showDaysCounter: true,
+    dateStr: date || baseConfig.dateStr,
+    anniversaryLabel: baseConfig.anniversaryLabel,
   };
-  
-  // Diary Stars: load from localStorage with initial presets
-  const [diaryStars, setDiaryStars] = useState<DiaryStarEntry[]>(() => {
-    try {
-      const stored = localStorage.getItem('romantic_diary_stars');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // ignore
-    }
-    return DEFAULT_DIARY_STARS;
-  });
+}
 
+function buildInitialConfig(): ConfessionConfig {
+  const stored = readStoredValue<Partial<ConfessionConfig>>(CONFIG_STORAGE_KEY);
+  const merged = stored
+    ? {
+        ...DEFAULT_CONFIG,
+        ...stored,
+        showDaysCounter: stored.showDaysCounter !== false,
+      }
+    : DEFAULT_CONFIG;
+
+  const withUrlOverrides = applyUrlOverrides(merged);
+  return {
+    ...withUrlOverrides,
+    daysTogether: calculateDaysFromDate(withUrlOverrides.dateStr),
+  };
+}
+
+function buildInitialMemoryStars(): MemoryStarPhoto[] {
+  const stored = readStoredValue<MemoryStarPhoto[]>(MEMORY_STARS_STORAGE_KEY);
+  return Array.isArray(stored) ? stored : DEFAULT_MEMORY_STARS;
+}
+
+function buildInitialDiaryStars(): DiaryStarEntry[] {
+  const stored = readStoredValue<DiaryStarEntry[]>(DIARY_STARS_STORAGE_KEY);
+  return Array.isArray(stored) ? stored : DEFAULT_DIARY_STARS;
+}
+
+export default function App() {
+  const [config, setConfig] = useState<ConfessionConfig>(buildInitialConfig);
+  const [memoryStars, setMemoryStars] = useState<MemoryStarPhoto[]>(buildInitialMemoryStars);
+  const [diaryStars, setDiaryStars] = useState<DiaryStarEntry[]>(buildInitialDiaryStars);
   const [isMemoryHubOpen, setIsMemoryHubOpen] = useState<boolean>(false);
   const [memoryHubTab, setMemoryHubTab] = useState<MemoryHubTab>('photos');
   const [selectedDiary, setSelectedDiary] = useState<DiaryStarEntry | null>(null);
-
   const [mode, setMode] = useState<ParticleMode>('galaxy');
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(true);
   const [isImmersive, setIsImmersive] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const hasLoadedServerContent = useRef(false);
+  const saveTimerRef = useRef<number | null>(null);
 
   const currentTheme = COLOR_THEMES[config.themeId] || COLOR_THEMES.rose;
 
@@ -114,21 +98,74 @@ export default function App() {
     }, 3000);
   }, []);
 
-  // Toggle ambient music
+  const handleUpdateMemoryStars = (stars: MemoryStarPhoto[]) => {
+    setMemoryStars(stars);
+    try {
+      localStorage.setItem(MEMORY_STARS_STORAGE_KEY, JSON.stringify(stars));
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSaveDiary = (entry: DiaryStarEntry) => {
+    setDiaryStars((prev) => {
+      const idx = prev.findIndex((d) => d.id === entry.id);
+      let updated: DiaryStarEntry[];
+      if (idx !== -1) {
+        updated = [...prev];
+        updated[idx] = entry;
+      } else {
+        updated = [entry, ...prev];
+      }
+      try {
+        localStorage.setItem(DIARY_STARS_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+    showToast('✨ 新的心语星辰已化作光芒，融入星轨！');
+  };
+
+  const handleDeleteDiary = (id: string) => {
+    setDiaryStars((prev) => {
+      const updated = prev.filter((d) => d.id !== id);
+      try {
+        localStorage.setItem(DIARY_STARS_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+    showToast('星语日记已归隐星空');
+  };
+
+  const handleSaveConfig = (newCfg: ConfessionConfig) => {
+    const autoDays = calculateDaysFromDate(newCfg.dateStr);
+    const updated = {
+      ...newCfg,
+      daysTogether: autoDays,
+    };
+    setConfig(updated);
+    try {
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+    showToast('✨ 纪念日与专属设置已保存！');
+  };
+
   const handleToggleSound = () => {
     const isPlaying = romanticAudio.toggleMusic();
     setIsAudioMuted(!isPlaying);
     showToast(isPlaying ? '已开启浪漫背景音效' : '已静音背景音效');
   };
 
-  // Switch between galaxy drift, stardust and romantic heart shape
   const handleTriggerHeart = () => {
     if (mode === 'galaxy' || mode === 'stardust') {
       setMode('heart');
-      // If audio is muted, gently remind or let them enjoy chimes
       romanticAudio.playChime(1.2);
     } else {
-      // Periodic bloom burst
       setMode('bloom');
       romanticAudio.playChime(1.4);
       setTimeout(() => setMode('heart'), 800);
@@ -143,58 +180,77 @@ export default function App() {
     });
   };
 
-  // Save new or edited diary star
-  const handleSaveDiary = (entry: DiaryStarEntry) => {
-    setDiaryStars((prev) => {
-      const idx = prev.findIndex((d) => d.id === entry.id);
-      let updated: DiaryStarEntry[];
-      if (idx !== -1) {
-        updated = [...prev];
-        updated[idx] = entry;
-      } else {
-        updated = [entry, ...prev];
-      }
-      try {
-        localStorage.setItem('romantic_diary_stars', JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-      return updated;
-    });
-    showToast('✨ 新的心语星辰已化作光芒，融入星轨！');
-  };
+  useEffect(() => {
+    let cancelled = false;
 
-  // Delete diary star
-  const handleDeleteDiary = (id: string) => {
-    setDiaryStars((prev) => {
-      const updated = prev.filter((d) => d.id !== id);
+    const loadServerContent = async () => {
       try {
-        localStorage.setItem('romantic_diary_stars', JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-      return updated;
-    });
-    showToast('星语日记已归隐星空');
-  };
+        const serverContent = await fetchContent();
+        if (cancelled) return;
 
-  // Save config to state and localStorage with auto-calculated days
-  const handleSaveConfig = (newCfg: ConfessionConfig) => {
-    const autoDays = calculateDaysFromDate(newCfg.dateStr);
-    const updated = {
-      ...newCfg,
-      daysTogether: autoDays,
+        if (serverContent.config) {
+          const mergedConfig = applyUrlOverrides({
+            ...DEFAULT_CONFIG,
+            ...serverContent.config,
+            showDaysCounter: serverContent.config.showDaysCounter !== false,
+          });
+          const hydratedConfig = {
+            ...mergedConfig,
+            daysTogether: calculateDaysFromDate(mergedConfig.dateStr),
+          };
+          setConfig(hydratedConfig);
+          localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(hydratedConfig));
+        }
+
+        if (Array.isArray(serverContent.memoryStars)) {
+          setMemoryStars(serverContent.memoryStars);
+          localStorage.setItem(MEMORY_STARS_STORAGE_KEY, JSON.stringify(serverContent.memoryStars));
+        }
+
+        if (Array.isArray(serverContent.diaryStars)) {
+          setDiaryStars(serverContent.diaryStars);
+          localStorage.setItem(DIARY_STARS_STORAGE_KEY, JSON.stringify(serverContent.diaryStars));
+        }
+      } catch (error) {
+        console.error('Failed to load content from server', error);
+      } finally {
+        if (!cancelled) {
+          hasLoadedServerContent.current = true;
+        }
+      }
     };
-    setConfig(updated);
-    try {
-      localStorage.setItem('romantic_confession_config', JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
-    showToast('✨ 纪念日与专属设置已保存！');
-  };
 
-  // Keyboard shortcut: Space to toggle heart
+    loadServerContent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedServerContent.current) return;
+
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(() => {
+      saveContent({
+        config,
+        memoryStars,
+        diaryStars,
+      }).catch((error) => {
+        console.error('Failed to save content to server', error);
+      });
+    }, 500);
+
+    return () => {
+      if (saveTimerRef.current !== null) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [config, memoryStars, diaryStars]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -211,7 +267,6 @@ export default function App() {
 
   return (
     <div className="relative w-screen h-[100dvh] overflow-hidden select-none touch-none">
-      {/* Dynamic Interactive Particle Canvas with Color Theme Switcher Dock */}
       <ParticleCanvas
         theme={currentTheme}
         mode={mode}
@@ -230,7 +285,6 @@ export default function App() {
         isImmersive={isImmersive}
       />
 
-      {/* Interactive Photo & Diary Stars on Trajectory with Hover Auto-Zoom */}
       <MemoryStarsOverlay
         stars={memoryStars}
         diaryStars={diaryStars}
@@ -244,7 +298,6 @@ export default function App() {
         }}
       />
 
-      {/* Top Bar Controls with Integrated Non-Overlapping Anniversary Badge */}
       <TopControls
         isMuted={isAudioMuted}
         onToggleSound={handleToggleSound}
@@ -271,7 +324,6 @@ export default function App() {
         recipient={config.recipient}
       />
 
-      {/* Bottom Interactive Floating Hint */}
       {mode === 'galaxy' && !isImmersive && (
         <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 pointer-events-none text-center px-4 w-full max-w-md transition-all duration-700 animate-pulse">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/15 shadow-xl">
@@ -295,7 +347,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Immersive Mode Exit Button */}
       {isImmersive && (
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
           <button
@@ -307,7 +358,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Unified Photo & Diary Hub (回忆星册) */}
       <UnifiedMemoryModal
         isOpen={isMemoryHubOpen}
         onClose={() => {
@@ -326,7 +376,6 @@ export default function App() {
         onSaveConfig={handleSaveConfig}
       />
 
-      {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-black/85 backdrop-blur-xl border border-white/20 text-xs sm:text-sm text-white shadow-2xl">
@@ -338,4 +387,3 @@ export default function App() {
     </div>
   );
 }
-

@@ -18,6 +18,7 @@ import {
 import { ConfessionConfig, MemoryStarPhoto, DiaryStarEntry, ColorTheme } from '../types';
 import { calculateDaysFromDate, formatDateToStandard, formatDateToInputFormat } from '../utils/dateUtils';
 import { romanticAudio } from '../utils/audio';
+import { uploadImage } from '../utils/contentApi';
 
 export type MemoryHubTab = 'photos' | 'diary' | 'anniversary';
 
@@ -97,51 +98,48 @@ export const UnifiedMemoryModal: React.FC<UnifiedMemoryModalProps> = ({
   if (!isOpen) return null;
 
   // --- Photo Stars Handlers ---
-  const handlePhotoUpload = (starId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (starId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (typeof ev.target?.result === 'string') {
-        const newImgUrl = ev.target.result;
-        const updated = memoryStars.map((s) =>
-          s.id === starId ? { ...s, imageUrl: newImgUrl } : s
-        );
-        onUpdateMemoryStars(updated);
-        romanticAudio.playChime(1.5);
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    try {
+      const newImgUrl = await uploadImage(file);
+      const updated = memoryStars.map((s) =>
+        s.id === starId ? { ...s, imageUrl: newImgUrl } : s
+      );
+      onUpdateMemoryStars(updated);
+      romanticAudio.playChime(1.5);
+    } catch (error) {
+      console.error('Failed to upload photo star image', error);
+    }
   };
 
-  const handleAddNewPhotoStar = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddNewPhotoStar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (typeof ev.target?.result === 'string') {
-        const newPhoto: MemoryStarPhoto = {
-          id: `photo-${Date.now()}`,
-          title: `星光合照 ${memoryStars.length + 1}`,
-          quote: '把我们的浪漫，写进浩瀚星河的每一颗星宿',
-          imageUrl: ev.target.result,
-          galaxyRadiusFactor: 0.28 + Math.random() * 0.42,
-          galaxySpeed: 0.00025 + Math.random() * 0.0002,
-          galaxyInitialAngle: Math.random() * Math.PI * 2,
-          heartT: Math.random() * Math.PI * 2,
-          stardustXFactor: 0.15 + Math.random() * 0.7,
-          stardustYFactor: 0.2 + Math.random() * 0.6,
-          date: '甜蜜瞬间',
-        };
-        onUpdateMemoryStars([...memoryStars, newPhoto]);
-        romanticAudio.playFireworkSound(0, 0.4);
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    try {
+      const imageUrl = await uploadImage(file);
+      const newPhoto: MemoryStarPhoto = {
+        id: `photo-${Date.now()}`,
+        title: `星光合照 ${memoryStars.length + 1}`,
+        quote: '把我们的浪漫，写进浩瀚星河的每一颗星宿',
+        imageUrl,
+        galaxyRadiusFactor: 0.28 + Math.random() * 0.42,
+        galaxySpeed: 0.00025 + Math.random() * 0.0002,
+        galaxyInitialAngle: Math.random() * Math.PI * 2,
+        heartT: Math.random() * Math.PI * 2,
+        stardustXFactor: 0.15 + Math.random() * 0.7,
+        stardustYFactor: 0.2 + Math.random() * 0.6,
+        date: '甜蜜瞬间',
+      };
+      onUpdateMemoryStars([...memoryStars, newPhoto]);
+      romanticAudio.playFireworkSound(0, 0.4);
+    } catch (error) {
+      console.error('Failed to upload new photo star image', error);
+    }
   };
 
   const handleDeletePhotoStar = (starId: string) => {
