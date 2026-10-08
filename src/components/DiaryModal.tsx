@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DiaryStarEntry, ColorTheme } from '../types';
-import { X, Sparkles, BookOpen, Heart, Calendar, CloudSun, Trash2, Edit3, Check } from 'lucide-react';
+import { X, Sparkles, BookOpen, Calendar, Trash2, Edit3 } from 'lucide-react';
 import { romanticAudio } from '../utils/audio';
 
 interface DiaryModalProps {
@@ -10,6 +10,7 @@ interface DiaryModalProps {
   onDeleteDiary?: (id: string) => void;
   initialDiary?: DiaryStarEntry | null; // If viewing/editing an existing diary
   theme: ColorTheme;
+  readOnly?: boolean;
 }
 
 const MOOD_OPTIONS = ['心动 💖', '甜蜜 🍯', '幸福 🥰', '想你 🌙', '温暖 ☕', '星愿 ✨'];
@@ -22,6 +23,7 @@ export const DiaryModal: React.FC<DiaryModalProps> = ({
   onDeleteDiary,
   initialDiary,
   theme,
+  readOnly = false,
 }) => {
   const [isEditing, setIsEditing] = useState<boolean>(!initialDiary);
   const [title, setTitle] = useState<string>('');
@@ -107,7 +109,7 @@ export const DiaryModal: React.FC<DiaryModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {initialDiary && !isEditing && (
+            {initialDiary && !isEditing && !readOnly && (
               <button
                 onClick={() => setIsEditing(true)}
                 title="编辑此篇日记"
@@ -117,7 +119,7 @@ export const DiaryModal: React.FC<DiaryModalProps> = ({
               </button>
             )}
 
-            {initialDiary && onDeleteDiary && (
+            {initialDiary && onDeleteDiary && !readOnly && (
               <button
                 onClick={handleDelete}
                 title="删除此星语日记"
@@ -190,7 +192,6 @@ export const DiaryModal: React.FC<DiaryModalProps> = ({
               <input
                 type="text"
                 value={title}
-                maxLength={30}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="例如：第一次牵手的傍晚 / 看日落的那个夏夜"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-400 transition-colors"
@@ -204,7 +205,6 @@ export const DiaryModal: React.FC<DiaryModalProps> = ({
                 <input
                   type="text"
                   value={date}
-                  maxLength={16}
                   onChange={(e) => setDate(e.target.value)}
                   placeholder="2024.05.20"
                   className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-pink-400 font-mono"
@@ -248,15 +248,14 @@ export const DiaryModal: React.FC<DiaryModalProps> = ({
                 <label className="text-xs font-medium text-slate-300">
                   心语日记正文
                 </label>
-                <span className="text-[11px] text-slate-400 font-mono">{content.length}/500</span>
+                <span className="text-[11px] text-slate-400 font-mono">{content.length} 字</span>
               </div>
               <textarea
-                rows={5}
+                rows={10}
                 value={content}
-                maxLength={500}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="记录属于你们的甜蜜瞬间、悄悄话或温暖回忆...保存后将化作星光悬挂在粒子星空中！"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-400 transition-colors resize-none leading-relaxed"
+                className="min-h-[220px] w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-400 transition-colors resize-y leading-relaxed"
               />
             </div>
 

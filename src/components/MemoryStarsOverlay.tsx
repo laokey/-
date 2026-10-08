@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MemoryStarPhoto, DiaryStarEntry, ColorTheme, ParticleMode } from '../types';
 import { calculateHeartbeatScale } from '../utils/heartMath';
 import { romanticAudio } from '../utils/audio';
+import { DiaryModal } from './DiaryModal';
 import { Sparkles, Calendar, Heart, X, ChevronLeft, ChevronRight, Eye, BookOpen, Feather } from 'lucide-react';
 
 interface MemoryStarsOverlayProps {
@@ -45,6 +46,7 @@ export const MemoryStarsOverlay: React.FC<MemoryStarsOverlayProps> = ({
   diaryPositionsRef.current = diaryPositions;
 
   const [selectedPhoto, setSelectedPhoto] = useState<MemoryStarPhoto | null>(null);
+  const [expandedDiary, setExpandedDiary] = useState<DiaryStarEntry | null>(null);
   const animRef = useRef<number | null>(null);
   const lastChimeTimeRef = useRef<number>(0);
   const leaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -225,6 +227,12 @@ export const MemoryStarsOverlay: React.FC<MemoryStarsOverlayProps> = ({
   const handleDiaryClick = (e: React.MouseEvent, diary: DiaryStarEntry) => {
     e.stopPropagation();
     onSelectDiary?.(diary);
+    romanticAudio.playChime(1.45);
+  };
+
+  const handleExpandDiary = (e: React.MouseEvent, diary: DiaryStarEntry) => {
+    e.stopPropagation();
+    setExpandedDiary(diary);
     romanticAudio.playChime(1.45);
   };
 
@@ -466,11 +474,10 @@ export const MemoryStarsOverlay: React.FC<MemoryStarsOverlayProps> = ({
                 {/* Diary Magnified Card */}
                 {activePopup.type === 'diary' && activePopup.diaryData && (
                   <div
-                    className="w-64 sm:w-72 p-3.5 rounded-2xl bg-[#110b1f]/95 backdrop-blur-2xl border border-cyan-400/35 shadow-2xl text-left cursor-pointer"
+                    className="w-64 sm:w-72 p-3.5 rounded-2xl bg-[#110b1f]/95 backdrop-blur-2xl border border-cyan-400/35 shadow-2xl text-left"
                     style={{
                       boxShadow: '0 24px 50px -10px rgba(56,189,248,0.4), 0 0 25px rgba(168,85,247,0.3)',
                     }}
-                    onClick={(e) => handleDiaryClick(e, activePopup.diaryData!)}
                   >
                     <div className="flex items-center justify-between gap-1 mb-2 pb-1.5 border-b border-white/10 text-xs">
                       <span className="text-[11px] font-mono text-cyan-200 flex items-center gap-1">
@@ -493,13 +500,17 @@ export const MemoryStarsOverlay: React.FC<MemoryStarsOverlayProps> = ({
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-cyan-300/90 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={(e) => handleExpandDiary(e, activePopup.diaryData!)}
+                      className="flex w-full items-center justify-between text-[11px] text-cyan-300/90 pt-0.5 cursor-pointer hover:text-cyan-200 transition-colors"
+                    >
                       <span className="flex items-center gap-1 font-medium">
                         <Eye className="w-3 h-3" />
                         点击展开阅读全文
                       </span>
                       <Sparkles className="w-3 h-3 text-amber-300" />
-                    </div>
+                    </button>
                   </div>
                 )}
               </div>
@@ -575,6 +586,15 @@ export const MemoryStarsOverlay: React.FC<MemoryStarsOverlayProps> = ({
           </div>
         </div>
       )}
+
+      <DiaryModal
+        isOpen={Boolean(expandedDiary)}
+        onClose={() => setExpandedDiary(null)}
+        onSaveDiary={() => {}}
+        initialDiary={expandedDiary}
+        theme={theme}
+        readOnly
+      />
     </>
   );
 };

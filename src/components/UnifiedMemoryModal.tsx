@@ -32,7 +32,7 @@ interface UnifiedMemoryModalProps {
   onUpdateMemoryStars: (stars: MemoryStarPhoto[]) => void;
   // Diary Stars
   diaryStars: DiaryStarEntry[];
-  onSaveDiary: (entry: DiaryStarEntry) => void;
+  onSaveDiary: (entry: DiaryStarEntry) => Promise<void> | void;
   onDeleteDiary?: (id: string) => void;
   initialSelectedDiary?: DiaryStarEntry | null;
   // Anniversary Config
@@ -183,7 +183,7 @@ export const UnifiedMemoryModal: React.FC<UnifiedMemoryModalProps> = ({
     setIsComposingDiary(true);
   };
 
-  const handleSaveDiaryEntry = () => {
+  const handleSaveDiaryEntry = async () => {
     if (!diaryTitle.trim() || !diaryContent.trim()) return;
 
     const existing = diaryStars.find((d) => d.id === editingDiaryId);
@@ -203,7 +203,7 @@ export const UnifiedMemoryModal: React.FC<UnifiedMemoryModalProps> = ({
       createdAt: existing ? existing.createdAt : Date.now(),
     };
 
-    onSaveDiary(newOrUpdated);
+    await onSaveDiary(newOrUpdated);
     romanticAudio.playFireworkSound(0, 0.4);
     setIsComposingDiary(false);
     setEditingDiaryId(null);
@@ -530,7 +530,6 @@ export const UnifiedMemoryModal: React.FC<UnifiedMemoryModalProps> = ({
                       <input
                         type="text"
                         value={diaryTitle}
-                        maxLength={15}
                         onChange={(e) => setDiaryTitle(e.target.value)}
                         placeholder="如：今夜看星星、第一次牵手"
                         className="w-full px-3 py-1.5 rounded-xl bg-black/50 border border-white/15 text-xs text-white focus:outline-none focus:border-cyan-400"
@@ -603,12 +602,11 @@ export const UnifiedMemoryModal: React.FC<UnifiedMemoryModalProps> = ({
                       写下想对TA说的心里话
                     </label>
                     <textarea
-                      rows={4}
+                      rows={10}
                       value={diaryContent}
-                      maxLength={500}
                       onChange={(e) => setDiaryContent(e.target.value)}
                       placeholder="这一刻关于你的温暖、思念或感动..."
-                      className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/15 text-xs text-white focus:outline-none focus:border-cyan-400 resize-none leading-relaxed"
+                      className="min-h-[220px] w-full px-3 py-2 rounded-xl bg-black/50 border border-white/15 text-xs text-white focus:outline-none focus:border-cyan-400 resize-y leading-relaxed whitespace-pre-wrap"
                     />
                   </div>
 

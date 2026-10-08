@@ -91,6 +91,21 @@ export default function App() {
 
   const currentTheme = COLOR_THEMES[config.themeId] || COLOR_THEMES.rose;
 
+  const persistContent = useCallback(
+    async (nextContent: {
+      config?: ConfessionConfig;
+      memoryStars?: MemoryStarPhoto[];
+      diaryStars?: DiaryStarEntry[];
+    }) => {
+      await saveContent({
+        config: nextContent.config ?? config,
+        memoryStars: nextContent.memoryStars ?? memoryStars,
+        diaryStars: nextContent.diaryStars ?? diaryStars,
+      });
+    },
+    [config, memoryStars, diaryStars]
+  );
+
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -107,35 +122,43 @@ export default function App() {
     }
   };
 
-  const handleSaveDiary = (entry: DiaryStarEntry) => {
-    setDiaryStars((prev) => {
-      const idx = prev.findIndex((d) => d.id === entry.id);
-      let updated: DiaryStarEntry[];
-      if (idx !== -1) {
-        updated = [...prev];
-        updated[idx] = entry;
-      } else {
-        updated = [entry, ...prev];
-      }
-      try {
-        localStorage.setItem(DIARY_STARS_STORAGE_KEY, JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-      return updated;
-    });
+  const handleSaveDiary = async (entry: DiaryStarEntry) => {
+    const idx = diaryStars.findIndex((d) => d.id === entry.id);
+    const updated =
+      idx !== -1
+        ? diaryStars.map((item) => (item.id === entry.id ? entry : item))
+        : [entry, ...diaryStars];
+
+    setDiaryStars(updated);
+    if (selectedDiary?.id === entry.id) {
+      setSelectedDiary(entry);
+    }
+    try {
+      localStorage.setItem(DIARY_STARS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+    try {
+      await persistContent({ diaryStars: updated });
+    } catch (error) {
+      console.error('Failed to persist diary entry', error);
+    }
     showToast('✨ 新的心语星辰已化作光芒，融入星轨！');
   };
 
   const handleDeleteDiary = (id: string) => {
-    setDiaryStars((prev) => {
-      const updated = prev.filter((d) => d.id !== id);
-      try {
-        localStorage.setItem(DIARY_STARS_STORAGE_KEY, JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
-      return updated;
+    const updated = diaryStars.filter((d) => d.id !== id);
+    setDiaryStars(updated);
+    if (selectedDiary?.id === id) {
+      setSelectedDiary(null);
+    }
+    try {
+      localStorage.setItem(DIARY_STARS_STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+    persistContent({ diaryStars: updated }).catch((error) => {
+      console.error('Failed to delete diary entry on server', error);
     });
     showToast('星语日记已归隐星空');
   };

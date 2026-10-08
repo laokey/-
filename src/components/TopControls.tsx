@@ -79,7 +79,7 @@ export const TopControls: React.FC<TopControlsProps> = ({
         {/* Zone 1: Brand Wordmark */}
         <div className="pointer-events-auto flex items-center gap-2 shrink-0">
           <span className="text-base sm:text-lg font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-rose-200 via-pink-100 to-white font-romantic-serif select-none">
-            心动星芒
+            I Love You
           </span>
         </div>
 
