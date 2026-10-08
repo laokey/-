@@ -1,4 +1,8 @@
 import { ColorTheme, ConfessionConfig, MemoryStarPhoto, DiaryStarEntry } from '../types';
+import cherryBlossomImage from '../assets/images/cherry_blossom_1790643491657.jpg';
+import coupleStarlitImage from '../assets/images/couple_starlit_1790643468442.jpg';
+import fireworksNightImage from '../assets/images/fireworks_night_1790643502182.jpg';
+import sunsetBeachImage from '../assets/images/sunset_beach_1790643481201.jpg';
 
 export const COLOR_THEMES: Record<string, ColorTheme> = {
   violet: {
@@ -107,7 +111,7 @@ export const DEFAULT_MEMORY_STARS: MemoryStarPhoto[] = [
     title: '初遇星河',
     date: '遇见你的那一刻',
     quote: '茫茫人海中，你如同最耀眼的恒星闯入我的生命',
-    imageUrl: '/src/assets/images/couple_starlit_1790643468442.jpg',
+    imageUrl: coupleStarlitImage,
     galaxyRadiusFactor: 0.38,
     galaxySpeed: 0.0006,
     galaxyInitialAngle: 0.4,
@@ -120,7 +124,7 @@ export const DEFAULT_MEMORY_STARS: MemoryStarPhoto[] = [
     title: '落日漫步',
     date: '橘色晚霞的承诺',
     quote: '落日沉溺于橘色的海，而我沉溺于温柔的你',
-    imageUrl: '/src/assets/images/sunset_beach_1790643481201.jpg',
+    imageUrl: sunsetBeachImage,
     galaxyRadiusFactor: 0.54,
     galaxySpeed: 0.00045,
     galaxyInitialAngle: 2.1,
@@ -133,7 +137,7 @@ export const DEFAULT_MEMORY_STARS: MemoryStarPhoto[] = [
     title: '樱花之约',
     date: '春风吹拂的时节',
     quote: '樱花盛开有千万朵，而我的目光只停留于你',
-    imageUrl: '/src/assets/images/cherry_blossom_1790643491657.jpg',
+    imageUrl: cherryBlossomImage,
     galaxyRadiusFactor: 0.68,
     galaxySpeed: 0.00035,
     galaxyInitialAngle: 3.8,
@@ -146,7 +150,7 @@ export const DEFAULT_MEMORY_STARS: MemoryStarPhoto[] = [
     title: '烟火誓言',
     date: '夜空中永恒的绚丽',
     quote: '愿每一个灿烂如焰火的明天，都有你在身旁',
-    imageUrl: '/src/assets/images/fireworks_night_1790643502182.jpg',
+    imageUrl: fireworksNightImage,
     galaxyRadiusFactor: 0.82,
     galaxySpeed: 0.00028,
     galaxyInitialAngle: 5.2,
@@ -203,5 +207,4 @@ export const DEFAULT_DIARY_STARS: DiaryStarEntry[] = [
     createdAt: Date.now() - 86400000 * 10,
   },
 ];
-
 
