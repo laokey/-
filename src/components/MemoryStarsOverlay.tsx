@@ -11,7 +11,6 @@ interface MemoryStarsOverlayProps {
   theme: ColorTheme;
   mode: ParticleMode;
   isImmersive: boolean;
-  onSelectDiary?: (diary: DiaryStarEntry) => void;
 }
 
 interface ActivePopup {
@@ -29,7 +28,6 @@ export const MemoryStarsOverlay: React.FC<MemoryStarsOverlayProps> = ({
   theme,
   mode,
   isImmersive,
-  onSelectDiary,
 }) => {
   const [photoPositions, setPhotoPositions] = useState<{ id: string; x: number; y: number }[]>([]);
   const [diaryPositions, setDiaryPositions] = useState<{ id: string; x: number; y: number }[]>([]);
@@ -226,13 +224,15 @@ export const MemoryStarsOverlay: React.FC<MemoryStarsOverlayProps> = ({
 
   const handleDiaryClick = (e: React.MouseEvent, diary: DiaryStarEntry) => {
     e.stopPropagation();
-    onSelectDiary?.(diary);
+    setExpandedDiary(diary);
+    setActivePopup(null);
     romanticAudio.playChime(1.45);
   };
 
   const handleExpandDiary = (e: React.MouseEvent, diary: DiaryStarEntry) => {
     e.stopPropagation();
     setExpandedDiary(diary);
+    setActivePopup(null);
     romanticAudio.playChime(1.45);
   };
 

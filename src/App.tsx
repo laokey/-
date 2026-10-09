@@ -314,11 +314,6 @@ export default function App() {
         theme={currentTheme}
         mode={mode}
         isImmersive={isImmersive}
-        onSelectDiary={(diary) => {
-          setSelectedDiary(diary);
-          setMemoryHubTab('diary');
-          setIsMemoryHubOpen(true);
-        }}
       />
 
       <TopControls
